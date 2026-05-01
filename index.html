@@ -23,9 +23,7 @@
       font-weight: bold;
     }
 
-    .container {
-      padding: 15px;
-    }
+    .container { padding: 15px; }
 
     #search {
       width: 100%;
@@ -36,26 +34,17 @@
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
-    .refresh-btn {
+    .refresh-btn, .cart-btn {
       width: 100%;
       padding: 10px;
       border-radius: 10px;
       border: none;
-      background: #f59e0b;
       color: white;
       margin-bottom: 8px;
     }
 
-    .cart-btn {
-      width: 100%;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      background: #22c55e;
-      color: white;
-      font-size: 16px;
-      margin-bottom: 8px;
-    }
+    .refresh-btn { background: #f59e0b; }
+    .cart-btn { background: #22c55e; }
 
     #lastUpdated {
       font-size: 12px;
@@ -74,17 +63,8 @@
       align-items: center;
     }
 
-    .title { font-weight: bold; }
-    .stock { font-size: 13px; }
-
     .low { color: orange; }
     .out { color: red; }
-
-    .actions {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
 
     .qty { width: 60px; }
 
@@ -112,7 +92,7 @@
 
   <button class="cart-btn" onclick="sendCart()">🛒 Send Order (WhatsApp)</button>
 
-  <div id="stockList"></div>
+  <div id="stockList">Loading...</div>
 
 </div>
 
@@ -122,8 +102,11 @@ const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7ErfBOZPbe4k
 let cart = [];
 let allProducts = [];
 let previousData = {};
+let notified = {};
 
 function loadData() {
+  document.getElementById("stockList").innerHTML = "Loading...";
+
   fetch(sheetURL)
     .then(res => res.text())
     .then(data => {
@@ -137,7 +120,6 @@ function loadData() {
 
         if (!product) return;
 
-        // 🔔 Detect change
         if (previousData[product] !== undefined && previousData[product] !== qty) {
           showNotification(product, previousData[product], qty);
         }
@@ -149,7 +131,6 @@ function loadData() {
 
       renderProducts(allProducts);
 
-      // 🕒 Update time
       document.getElementById("lastUpdated").innerText =
         "Last updated: " + new Date().toLocaleTimeString();
     });
@@ -173,17 +154,19 @@ function renderProducts(products) {
       cls = "low";
     }
 
+    let id = btoa(item.product);
+
     let div = document.createElement("div");
     div.className = "card";
 
     div.innerHTML = `
       <div>
-        <div class="title">${item.product}</div>
-        <div class="stock ${cls}">Stock: ${stockText}</div>
+        <b>${item.product}</b><br>
+        <span class="${cls}">${stockText}</span>
       </div>
 
-      <div class="actions">
-        <input type="number" min="1" max="${item.qty}" value="1" id="qty-${item.product}" class="qty">
+      <div>
+        <input type="number" min="1" max="${item.qty}" value="1" id="qty-${id}" class="qty"><br>
         ${
           item.qty === 0
           ? `<span style="color:gray;">Out</span>`
@@ -197,17 +180,18 @@ function renderProducts(products) {
 }
 
 function addToCart(product, stockQty){
-  let qty = parseInt(document.getElementById(`qty-${product}`).value);
+  let id = "qty-" + btoa(product);
+  let qty = parseInt(document.getElementById(id).value);
 
-  if(!qty || qty<=0) return alert("Enter valid qty");
-  if(qty > stockQty) return alert("Not enough stock");
+  if(!qty || qty<=0) return showToast("Enter valid qty");
+  if(qty > stockQty) return showToast("Not enough stock");
 
   cart.push({product, qty});
-  alert(product + " added");
+  showToast(product + " added");
 }
 
 function sendCart(){
-  if(!cart.length) return alert("Cart empty");
+  if(!cart.length) return showToast("Cart empty");
 
   const phone = "916360397604";
 
@@ -237,20 +221,39 @@ function refreshData(){
   setTimeout(()=>btn.innerText="🔄 Refresh",2000);
 }
 
-// 🔔 Notification
+// 🔔 Smart notification
 function showNotification(product, oldQty, newQty){
-  alert(`Stock changed:\n${product}\n${oldQty} → ${newQty}`);
-
-  let audio = new Audio("https://www.soundjay.com/buttons/beep-01a.mp3");
-  audio.play();
+  if(notified[product]) return;
+  showToast(`Updated: ${product} (${oldQty} → ${newQty})`);
+  notified[product] = true;
 }
 
-// 🔄 Auto refresh every 30 sec
+// 🔕 Reset notification memory
+setInterval(()=>{ notified = {}; }, 60000);
+
+// 🔄 Auto refresh
 setInterval(loadData, 30000);
+
+// 🔥 Toast
+function showToast(msg){
+  let t = document.createElement("div");
+  t.innerText = msg;
+  t.style = `
+    position:fixed;
+    bottom:20px;
+    left:50%;
+    transform:translateX(-50%);
+    background:#111;
+    color:white;
+    padding:10px 15px;
+    border-radius:8px;
+  `;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),2000);
+}
 
 loadData();
 
-// PWA
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>GLOBAL INDIA CERAMICStitle>
+  <title>GLOBAL INDIA CERAMICS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- PWA -->
@@ -9,11 +9,7 @@
   <meta name="theme-color" content="#1f2d3d">
 
   <style>
-    body {
-      font-family: Arial;
-      margin: 0;
-      background: #eef2f7;
-    }
+    body { font-family: Arial; margin: 0; background: #eef2f7; }
 
     header {
       background: #1f2d3d;
@@ -23,144 +19,187 @@
       font-size: 22px;
     }
 
-    .container {
-      padding: 15px;
-    }
+    .container { padding: 15px; }
 
     input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 8px;
+      padding: 8px;
+      border-radius: 6px;
       border: 1px solid #ccc;
     }
 
-    button {
+    #search {
       width: 100%;
-      padding: 10px;
       margin-bottom: 10px;
+    }
+
+    button {
+      padding: 8px;
       border: none;
-      border-radius: 8px;
+      border-radius: 6px;
       background: #3498db;
       color: white;
-      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .cart-btn {
+      width: 100%;
+      margin-bottom: 10px;
+      background: #25D366;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
       background: white;
-      border-radius: 10px;
-      overflow: hidden;
     }
 
     th {
       background: #3498db;
       color: white;
-      padding: 12px;
+      padding: 10px;
     }
 
     td {
-      padding: 12px;
+      padding: 10px;
       border-bottom: 1px solid #ddd;
       text-align: center;
-    }
-
-    tr:hover {
-      background: #f1f1f1;
     }
 
     .out {
       color: red;
       font-weight: bold;
     }
-
-    footer {
-      text-align: center;
-      padding: 10px;
-      font-size: 12px;
-      color: gray;
-    }
   </style>
 </head>
 
 <body>
 
-<header>🛠️ ELITE SANITARY STORE</header>
+<header>🛠️ GLOBAL INDIA CERAMICS👑</header>
 
 <div class="container">
 
   <input type="text" id="search" placeholder="Search product..." onkeyup="searchProduct()">
-  
-  <button onclick="loadData()">🔄 Refresh Stock</button>
+
+  <button class="cart-btn" onclick="sendCart()">🛒 Send Order (WhatsApp)</button>
 
   <table id="stockTable">
     <tr>
       <th>Product</th>
-      <th>Quantity</th>
+      <th>Stock</th>
+      <th>Qty</th>
+      <th>Action</th>
     </tr>
   </table>
 
 </div>
 
-<footer>
-  Live Stock | Install this app on your phone 📲
-</footer>
-
 <script>
-  const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7ErfBOZPbe4khlHRrx5wgEFl6D13sWJ9Tk9TKhRVSgJ3edXB6Pe7NHygWEHsAbf9mcXkypsvdf9nU/pub?gid=0&single=true&output=csv";
+const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7ErfBOZPbe4khlHRrx5wgEFl6D13sWJ9Tk9TKhRVSgJ3edXB6Pe7NHygWEHsAbf9mcXkypsvdf9nU/pub?gid=0&single=true&output=csv";
 
-  function loadData() {
-    let table = document.getElementById("stockTable");
-    table.innerHTML = `
-      <tr>
-        <th>Product</th>
-        <th>Quantity</th>
-      </tr>
-    `;
+let cart = [];
 
-    fetch(sheetURL)
-      .then(res => res.text())
-      .then(data => {
-        let rows = data.split("\n").slice(1);
+function loadData() {
+  let table = document.getElementById("stockTable");
 
-        rows.forEach(row => {
-          let cols = row.split(",");
-          let product = cols[0];
-          let qty = parseInt(cols[1]);
+  table.innerHTML = `
+    <tr>
+      <th>Product</th>
+      <th>Stock</th>
+      <th>Qty</th>
+      <th>Action</th>
+    </tr>
+  `;
 
-          if (!product) return;
+  fetch(sheetURL)
+    .then(res => res.text())
+    .then(data => {
+      let rows = data.split("\n").slice(1);
 
-          let tr = document.createElement("tr");
-          let qtyText = (!qty && qty !== 0) ? "-" : (qty === 0 ? "Out of Stock" : qty);
+      rows.forEach(row => {
+        let cols = row.split(",");
+        let product = cols[0];
+        let qty = parseInt(cols[1]);
 
-          tr.innerHTML = `
-            <td>${product}</td>
-            <td class="${qty === 0 ? "out" : ""}">${qtyText}</td>
-          `;
+        if (!product) return;
 
-          table.appendChild(tr);
-        });
+        let qtyText = qty === 0 ? "Out of Stock" : qty;
+
+        let tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${product}</td>
+          <td class="${qty === 0 ? "out" : ""}">${qtyText}</td>
+          <td>
+            <input type="number" min="1" max="${qty}" value="1" id="qty-${product}" style="width:60px;">
+          </td>
+          <td>
+            ${qty === 0 
+              ? '<span style="color:gray;">Out</span>' 
+              : `<button onclick="addToCart('${product}', ${qty})">Add</button>`}
+          </td>
+        `;
+
+        table.appendChild(tr);
       });
-  }
-
-  function searchProduct() {
-    let input = document.getElementById("search").value.toLowerCase();
-    let rows = document.querySelectorAll("#stockTable tr");
-
-    rows.forEach((row, index) => {
-      if (index === 0) return;
-      let text = row.innerText.toLowerCase();
-      row.style.display = text.includes(input) ? "" : "none";
     });
+}
+
+function addToCart(product, stockQty) {
+  let qty = parseInt(document.getElementById(`qty-${product}`).value);
+
+  if (!qty || qty <= 0) {
+    alert("Enter valid quantity");
+    return;
   }
 
-  loadData();
-
-  // Service Worker (App mode)
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("sw.js");
+  if (qty > stockQty) {
+    alert("Not enough stock");
+    return;
   }
+
+  cart.push({ product, qty });
+  alert(product + " added to cart");
+}
+
+function sendCart() {
+  if (cart.length === 0) {
+    alert("Cart is empty");
+    return;
+  }
+
+  const phone = "916360397604"; // ✅ YOUR NUMBER
+
+  let message = "Hello, I want to order:\n\n";
+
+  cart.forEach(item => {
+    message += `${item.product} - Qty: ${item.qty}\n`;
+  });
+
+  message += "\nPlease confirm.";
+
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  window.open(url, "_blank");
+
+  cart = [];
+}
+
+function searchProduct() {
+  let input = document.getElementById("search").value.toLowerCase();
+  let rows = document.querySelectorAll("#stockTable tr");
+
+  rows.forEach((row, index) => {
+    if (index === 0) return;
+    let text = row.innerText.toLowerCase();
+    row.style.display = text.includes(input) ? "" : "none";
+  });
+}
+
+loadData();
+
+// PWA
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
 </script>
 
 </body>

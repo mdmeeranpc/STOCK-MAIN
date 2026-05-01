@@ -1,9 +1,12 @@
-html id="g2f7xk"
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Hardware Shop Stock</title>
+  <title>Elite Sanitary Store</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1f2d3d">
 
   <style>
     body {
@@ -27,9 +30,20 @@ html id="g2f7xk"
     input {
       width: 100%;
       padding: 10px;
-      margin-bottom: 15px;
+      margin-bottom: 10px;
       border-radius: 8px;
       border: 1px solid #ccc;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #3498db;
+      color: white;
+      font-size: 16px;
     }
 
     table {
@@ -72,11 +86,13 @@ html id="g2f7xk"
 
 <body>
 
-<header>ELITE SANITARY STORE</header>
+<header>🛠️ ELITE SANITARY STORE</header>
 
 <div class="container">
 
   <input type="text" id="search" placeholder="Search product..." onkeyup="searchProduct()">
+  
+  <button onclick="loadData()">🔄 Refresh Stock</button>
 
   <table id="stockTable">
     <tr>
@@ -88,37 +104,45 @@ html id="g2f7xk"
 </div>
 
 <footer>
-  Live Stock | Updated from Google Sheet
+  Live Stock | Install this app on your phone 📲
 </footer>
 
 <script>
   const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7ErfBOZPbe4khlHRrx5wgEFl6D13sWJ9Tk9TKhRVSgJ3edXB6Pe7NHygWEHsAbf9mcXkypsvdf9nU/pub?gid=0&single=true&output=csv";
 
-  fetch(sheetURL)
-    .then(res => res.text())
-    .then(data => {
-      let rows = data.split("\n").slice(1);
-      let table = document.getElementById("stockTable");
+  function loadData() {
+    let table = document.getElementById("stockTable");
+    table.innerHTML = `
+      <tr>
+        <th>Product</th>
+        <th>Quantity</th>
+      </tr>
+    `;
 
-      rows.forEach(row => {
-        let cols = row.split(",");
-        let product = cols[0];
-        let qty = parseInt(cols[1]);
+    fetch(sheetURL)
+      .then(res => res.text())
+      .then(data => {
+        let rows = data.split("\n").slice(1);
 
-        if (!product) return;
+        rows.forEach(row => {
+          let cols = row.split(",");
+          let product = cols[0];
+          let qty = parseInt(cols[1]);
 
-        let tr = document.createElement("tr");
+          if (!product) return;
 
-        let qtyText = qty === 0 ? "Out of Stock" : qty;
+          let tr = document.createElement("tr");
+          let qtyText = (!qty && qty !== 0) ? "-" : (qty === 0 ? "Out of Stock" : qty);
 
-        tr.innerHTML = `
-          <td>${product}</td>
-          <td class="${qty === 0 ? "out" : ""}">${qtyText}</td>
-        `;
+          tr.innerHTML = `
+            <td>${product}</td>
+            <td class="${qty === 0 ? "out" : ""}">${qtyText}</td>
+          `;
 
-        table.appendChild(tr);
+          table.appendChild(tr);
+        });
       });
-    });
+  }
 
   function searchProduct() {
     let input = document.getElementById("search").value.toLowerCase();
@@ -129,6 +153,13 @@ html id="g2f7xk"
       let text = row.innerText.toLowerCase();
       row.style.display = text.includes(input) ? "" : "none";
     });
+  }
+
+  loadData();
+
+  // Service Worker (App mode)
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("sw.js");
   }
 </script>
 

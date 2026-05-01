@@ -4,92 +4,112 @@
   <title>GLOBAL INDIA CERAMICS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- PWA -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1f2d3d">
+  <meta name="theme-color" content="#0f172a">
 
   <style>
-    body { font-family: Arial; margin: 0; background: #eef2f7; }
-
-    header {
-      background: #1f2d3d;
-      color: white;
-      padding: 15px;
-      text-align: center;
-      font-size: 22px;
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      background: #f1f5f9;
     }
 
-    .container { padding: 15px; }
+    header {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
+      padding: 18px;
+      text-align: center;
+      font-size: 20px;
+      font-weight: bold;
+    }
 
-    input {
-      padding: 8px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
+    .container {
+      padding: 15px;
     }
 
     #search {
       width: 100%;
-      margin-bottom: 10px;
-    }
-
-    button {
-      padding: 8px;
+      padding: 12px;
+      border-radius: 10px;
       border: none;
-      border-radius: 6px;
-      background: #3498db;
-      color: white;
-      cursor: pointer;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     }
 
     .cart-btn {
       width: 100%;
-      margin-bottom: 10px;
-      background: #25D366;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: white;
-    }
-
-    th {
-      background: #3498db;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #22c55e;
       color: white;
-      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 12px;
     }
 
-    td {
-      padding: 10px;
-      border-bottom: 1px solid #ddd;
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .info {
+      flex: 1;
+    }
+
+    .title {
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .stock {
+      font-size: 13px;
+      margin-top: 4px;
+    }
+
+    .low { color: orange; }
+    .out { color: red; }
+
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      align-items: center;
+    }
+
+    .qty {
+      width: 60px;
+      padding: 5px;
       text-align: center;
     }
 
-    .out {
-      color: red;
-      font-weight: bold;
+    .btn {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 6px;
+      background: #3b82f6;
+      color: white;
     }
+
   </style>
 </head>
 
 <body>
 
-<header>🛠️ GLOBAL INDIA CERAMICS👑</header>
+<header>🛠️ GLOBAL INDIA CERAMICS</header>
 
 <div class="container">
 
-  <input type="text" id="search" placeholder="Search product..." onkeyup="searchProduct()">
+  <input type="text" id="search" placeholder="🔍 Search product..." onkeyup="searchProduct()">
 
   <button class="cart-btn" onclick="sendCart()">🛒 Send Order (WhatsApp)</button>
 
-  <table id="stockTable">
-    <tr>
-      <th>Product</th>
-      <th>Stock</th>
-      <th>Qty</th>
-      <th>Action</th>
-    </tr>
-  </table>
+  <div id="stockList"></div>
 
 </div>
 
@@ -97,23 +117,14 @@
 const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7ErfBOZPbe4khlHRrx5wgEFl6D13sWJ9Tk9TKhRVSgJ3edXB6Pe7NHygWEHsAbf9mcXkypsvdf9nU/pub?gid=0&single=true&output=csv";
 
 let cart = [];
+let allProducts = [];
 
 function loadData() {
-  let table = document.getElementById("stockTable");
-
-  table.innerHTML = `
-    <tr>
-      <th>Product</th>
-      <th>Stock</th>
-      <th>Qty</th>
-      <th>Action</th>
-    </tr>
-  `;
-
   fetch(sheetURL)
     .then(res => res.text())
     .then(data => {
       let rows = data.split("\n").slice(1);
+      allProducts = [];
 
       rows.forEach(row => {
         let cols = row.split(",");
@@ -121,82 +132,94 @@ function loadData() {
         let qty = parseInt(cols[1]);
 
         if (!product) return;
-
-        let qtyText = qty === 0 ? "Out of Stock" : qty;
-
-        let tr = document.createElement("tr");
-
-        tr.innerHTML = `
-          <td>${product}</td>
-          <td class="${qty === 0 ? "out" : ""}">${qtyText}</td>
-          <td>
-            <input type="number" min="1" max="${qty}" value="1" id="qty-${product}" style="width:60px;">
-          </td>
-          <td>
-            ${qty === 0 
-              ? '<span style="color:gray;">Out</span>' 
-              : `<button onclick="addToCart('${product}', ${qty})">Add</button>`}
-          </td>
-        `;
-
-        table.appendChild(tr);
+        allProducts.push({ product, qty });
       });
+
+      renderProducts(allProducts);
     });
 }
 
-function addToCart(product, stockQty) {
+function renderProducts(products) {
+  let container = document.getElementById("stockList");
+  container.innerHTML = "";
+
+  products.sort((a,b)=>a.qty-b.qty);
+
+  products.forEach(item => {
+    let stockText = item.qty;
+    let cls = "";
+
+    if(item.qty === 0){
+      stockText = "Out of Stock";
+      cls = "out";
+    } else if(item.qty < 5){
+      stockText = item.qty + " (Low)";
+      cls = "low";
+    }
+
+    let div = document.createElement("div");
+    div.className = "card";
+
+    div.innerHTML = `
+      <div class="info">
+        <div class="title">${item.product}</div>
+        <div class="stock ${cls}">Stock: ${stockText}</div>
+      </div>
+
+      <div class="actions">
+        <input type="number" min="1" max="${item.qty}" value="1" id="qty-${item.product}" class="qty">
+        ${
+          item.qty === 0
+          ? `<span style="color:gray;">Out</span>`
+          : `<button class="btn" onclick="addToCart('${item.product}', ${item.qty})">Add</button>`
+        }
+      </div>
+    `;
+
+    container.appendChild(div);
+  });
+}
+
+function addToCart(product, stockQty){
   let qty = parseInt(document.getElementById(`qty-${product}`).value);
 
-  if (!qty || qty <= 0) {
-    alert("Enter valid quantity");
-    return;
-  }
+  if(!qty || qty<=0) return alert("Enter valid qty");
+  if(qty > stockQty) return alert("Not enough stock");
 
-  if (qty > stockQty) {
-    alert("Not enough stock");
-    return;
-  }
-
-  cart.push({ product, qty });
-  alert(product + " added to cart");
+  cart.push({product, qty});
+  alert(product + " added");
 }
 
-function sendCart() {
-  if (cart.length === 0) {
-    alert("Cart is empty");
-    return;
-  }
+function sendCart(){
+  if(!cart.length) return alert("Cart empty");
 
-  const phone = "916360397604"; // ✅ YOUR NUMBER
+  const phone = "916360397604";
 
-  let message = "Hello, I want to order:\n\n";
+  let msg = "Hello, I want to order:\n\n";
 
-  cart.forEach(item => {
-    message += `${item.product} - Qty: ${item.qty}\n`;
+  cart.forEach(i=>{
+    msg += `${i.product} - Qty: ${i.qty}\n`;
   });
 
-  message += "\nPlease confirm.";
+  msg += "\nPlease confirm.";
 
-  const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-  window.open(url, "_blank");
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
 
-  cart = [];
+  cart=[];
 }
 
-function searchProduct() {
+function searchProduct(){
   let input = document.getElementById("search").value.toLowerCase();
-  let rows = document.querySelectorAll("#stockTable tr");
 
-  rows.forEach((row, index) => {
-    if (index === 0) return;
-    let text = row.innerText.toLowerCase();
-    row.style.display = text.includes(input) ? "" : "none";
-  });
+  let filtered = allProducts.filter(p =>
+    p.product.toLowerCase().includes(input)
+  );
+
+  renderProducts(filtered);
 }
 
 loadData();
 
-// PWA
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }

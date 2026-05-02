@@ -4,9 +4,6 @@
   <title>GLOBAL INDIA CERAMICS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0f172a">
-
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -15,7 +12,7 @@
     }
 
     header {
-      background: linear-gradient(135deg, #0f172a, #1e293b);
+      background: linear-gradient(135deg, #1e3a8a, #0f172a);
       color: white;
       padding: 18px;
       text-align: center;
@@ -23,28 +20,44 @@
       font-weight: bold;
     }
 
-    .container { padding: 15px; }
+    .container {
+      padding: 12px;
+    }
 
-    #search {
+    .search-box {
+      margin-bottom: 10px;
+    }
+
+    input {
       width: 100%;
       padding: 12px;
-      border-radius: 10px;
+      border-radius: 12px;
       border: none;
-      margin-bottom: 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
     }
 
-    .refresh-btn, .cart-btn {
-      width: 100%;
+    .top-bar {
+      display: flex;
+      gap: 10px;
+      margin: 10px 0;
+    }
+
+    button {
+      flex: 1;
       padding: 10px;
-      border-radius: 10px;
       border: none;
+      border-radius: 10px;
       color: white;
-      margin-bottom: 8px;
+      font-size: 14px;
     }
 
-    .refresh-btn { background: #f59e0b; }
-    .cart-btn { background: #22c55e; }
+    .refresh {
+      background: #f59e0b;
+    }
+
+    .cart {
+      background: #22c55e;
+    }
 
     #lastUpdated {
       font-size: 12px;
@@ -54,27 +67,44 @@
 
     .card {
       background: white;
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 12px;
       margin-bottom: 10px;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.08);
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
 
+    .name {
+      font-weight: bold;
+      font-size: 15px;
+    }
+
+    .stock {
+      font-size: 13px;
+    }
+
     .low { color: orange; }
     .out { color: red; }
 
-    .qty { width: 60px; }
+    .qty {
+      width: 60px;
+      padding: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
 
-    .btn {
+    .add {
+      margin-top: 5px;
+      padding: 5px 10px;
       background: #3b82f6;
       color: white;
-      border: none;
       border-radius: 6px;
-      padding: 6px;
+      border: none;
     }
+
   </style>
 </head>
 
@@ -84,13 +114,16 @@
 
 <div class="container">
 
-  <input type="text" id="search" placeholder="🔍 Search product..." onkeyup="searchProduct()">
+  <div class="search-box">
+    <input type="text" id="search" placeholder="🔍 Search product..." onkeyup="searchProduct()">
+  </div>
 
-  <button class="refresh-btn" onclick="refreshData()">🔄 Refresh</button>
+  <div class="top-bar">
+    <button id="refreshBtn" class="refresh" onclick="refreshData()">🔄 Refresh</button>
+    <button class="cart" onclick="sendCart()">🛒 Order</button>
+  </div>
 
   <div id="lastUpdated">Last updated: --</div>
-
-  <button class="cart-btn" onclick="sendCart()">🛒 Send Order (WhatsApp)</button>
 
   <div id="stockList">Loading...</div>
 
@@ -101,10 +134,8 @@ const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ7ErfBOZPbe4k
 
 let cart = [];
 let allProducts = [];
-let previousData = {};
-let notified = {};
 
-function loadData() {
+function loadData(){
   document.getElementById("stockList").innerHTML = "Loading...";
 
   fetch(sheetURL)
@@ -113,20 +144,14 @@ function loadData() {
       let rows = data.split("\n").slice(1);
       allProducts = [];
 
-      rows.forEach(row => {
+      rows.forEach(row=>{
         let cols = row.split(",");
         let product = cols[0];
         let qty = parseInt(cols[1]);
 
-        if (!product) return;
+        if(!product) return;
 
-        if (previousData[product] !== undefined && previousData[product] !== qty) {
-          showNotification(product, previousData[product], qty);
-        }
-
-        previousData[product] = qty;
-
-        allProducts.push({ product, qty });
+        allProducts.push({product, qty});
       });
 
       renderProducts(allProducts);
@@ -136,23 +161,16 @@ function loadData() {
     });
 }
 
-function renderProducts(products) {
+function renderProducts(products){
   let container = document.getElementById("stockList");
   container.innerHTML = "";
 
-  products.sort((a,b)=>a.qty-b.qty);
-
-  products.forEach(item => {
-    let stockText = item.qty;
+  products.forEach(item=>{
     let cls = "";
+    let text = item.qty;
 
-    if(item.qty === 0){
-      stockText = "Out of Stock";
-      cls = "out";
-    } else if(item.qty < 5){
-      stockText = item.qty + " (Low)";
-      cls = "low";
-    }
+    if(item.qty === 0){ text="Out"; cls="out"; }
+    else if(item.qty < 5){ text=item.qty+" (Low)"; cls="low"; }
 
     let id = btoa(item.product);
 
@@ -161,16 +179,16 @@ function renderProducts(products) {
 
     div.innerHTML = `
       <div>
-        <b>${item.product}</b><br>
-        <span class="${cls}">${stockText}</span>
+        <div class="name">${item.product}</div>
+        <div class="stock ${cls}">Stock: ${text}</div>
       </div>
 
       <div>
-        <input type="number" min="1" max="${item.qty}" value="1" id="qty-${id}" class="qty"><br>
+        <input type="number" min="1" max="${item.qty}" value="1" id="qty-${id}" class="qty">
         ${
           item.qty === 0
-          ? `<span style="color:gray;">Out</span>`
-          : `<button class="btn" onclick="addToCart('${item.product}', ${item.qty})">Add</button>`
+          ? `<div style="color:gray;">Out</div>`
+          : `<button class="add" onclick="addToCart('${item.product}', ${item.qty})">Add</button>`
         }
       </div>
     `;
@@ -183,80 +201,59 @@ function addToCart(product, stockQty){
   let id = "qty-" + btoa(product);
   let qty = parseInt(document.getElementById(id).value);
 
-  if(!qty || qty<=0) return showToast("Enter valid qty");
-  if(qty > stockQty) return showToast("Not enough stock");
+  if(!qty || qty<=0) return toast("Enter valid qty");
+  if(qty > stockQty) return toast("Not enough stock");
 
   cart.push({product, qty});
-  showToast(product + " added");
+  toast(product + " added");
 }
 
 function sendCart(){
-  if(!cart.length) return showToast("Cart empty");
-
-  const phone = "916360397604";
+  if(!cart.length) return toast("Cart empty");
 
   let msg = "Hello, I want to order:\n\n";
-
   cart.forEach(i=>{
     msg += `${i.product} - Qty: ${i.qty}\n`;
   });
 
-  msg += "\nPlease confirm.";
-
-  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`);
-
+  window.open(`https://wa.me/916360397604?text=${encodeURIComponent(msg)}`);
   cart=[];
 }
 
 function searchProduct(){
   let input = document.getElementById("search").value.toLowerCase();
-  let filtered = allProducts.filter(p => p.product.toLowerCase().includes(input));
+  let filtered = allProducts.filter(p=>p.product.toLowerCase().includes(input));
   renderProducts(filtered);
 }
 
 function refreshData(){
+  let btn = document.getElementById("refreshBtn");
+
+  btn.innerText = "⏳ Updating...";
+  btn.disabled = true;
+
   loadData();
-  let btn = document.querySelector(".refresh-btn");
-  btn.innerText = "✅ Updated";
-  setTimeout(()=>btn.innerText="🔄 Refresh",2000);
+
+  setTimeout(()=>{
+    btn.innerText = "✅ Updated";
+    setTimeout(()=>{
+      btn.innerText = "🔄 Refresh";
+      btn.disabled = false;
+    },1500);
+  },1000);
 }
 
-// 🔔 Smart notification
-function showNotification(product, oldQty, newQty){
-  if(notified[product]) return;
-  showToast(`Updated: ${product} (${oldQty} → ${newQty})`);
-  notified[product] = true;
-}
-
-// 🔕 Reset notification memory
-setInterval(()=>{ notified = {}; }, 60000);
-
-// 🔄 Auto refresh
-setInterval(loadData, 30000);
-
-// 🔥 Toast
-function showToast(msg){
-  let t = document.createElement("div");
-  t.innerText = msg;
-  t.style = `
-    position:fixed;
-    bottom:20px;
-    left:50%;
-    transform:translateX(-50%);
-    background:#111;
-    color:white;
-    padding:10px 15px;
-    border-radius:8px;
-  `;
+function toast(msg){
+  let t=document.createElement("div");
+  t.innerText=msg;
+  t.style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#111;color:white;padding:10px;border-radius:8px;";
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),2000);
 }
 
-loadData();
+setInterval(loadData,30000);
 
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("sw.js");
-}
+loadData();
 </script>
 
 </body>
